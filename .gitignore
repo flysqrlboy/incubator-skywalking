@@ -11,3 +11,5 @@ packages/
 **/dependency-reduced-pom.xml
 /skywalking-agent/
 /dist/
+**/*.checkstyle
+**/*.factorypath
