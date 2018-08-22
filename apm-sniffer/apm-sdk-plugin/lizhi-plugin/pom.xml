@@ -7,8 +7,8 @@
     <artifactId>apm-sdk-plugin</artifactId>
     <version>5.0.0-beta2</version>
   </parent>
-  <artifactId>apm-lizhi-dc-0.4.x-plugin</artifactId>
-  <name>lizhi-dc-0.4.x-plugin</name>
+  <artifactId>apm-lizhi-plugin</artifactId>
+  <name>lizhi-plugin</name>
   <url>http://maven.apache.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
