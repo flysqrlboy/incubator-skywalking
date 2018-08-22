@@ -23,16 +23,10 @@ public class AppServerInterceptor implements InstanceMethodsAroundInterceptor {
         SocketContext socketContext = (SocketContext)allArguments[0];
         ContextCarrier contextCarrier = new ContextCarrier();
 
-//        CarrierItem next = contextCarrier.items();
-//        while (next.hasNext()) {
-//            next = next.next();
-//            next.setHeadValue(request.getHeader(next.getHeadKey()));
-//        }
         SocketRequest socketRequest = socketContext.getRequest();
 
-
         AbstractSpan span = ContextManager.createEntrySpan(
-                "Op:" + socketRequest.getOp() + ";Acceptor:" + socketRequest.getAcceptor()
+                "AppServer/Op:" + socketRequest.getOp() + ";Acceptor:" + socketRequest.getAcceptor()
                         + ";ClientId:" + socketRequest.getClientId() + ";",
                 contextCarrier);
         span.setComponent("AppServer");
