@@ -16,3 +16,7 @@
 
 DC-0.4.X=org.apache.skywalking.apm.plugin.lizhi.dc.v04.define.DCClientInstrumentation
 DC-0.4.X=org.apache.skywalking.apm.plugin.lizhi.dc.v04.define.DCServerInstrumentation
+DS-1.4.X=org.apache.skywalking.apm.plugin.lizhi.ds.define.DSClientInstrumentation
+DS-1.4.X=org.apache.skywalking.apm.plugin.lizhi.ds.define.DSServerInstrumentation
+Whalin-MemCached-3.X=org.apache.skywalking.apm.plugin.lizhi.ds.define.WhalinMemcachedInstrumentation
+AppServer-2.3.X=org.apache.skywalking.apm.plugin.lizhi.appserver.define.AppServerInstrumentation

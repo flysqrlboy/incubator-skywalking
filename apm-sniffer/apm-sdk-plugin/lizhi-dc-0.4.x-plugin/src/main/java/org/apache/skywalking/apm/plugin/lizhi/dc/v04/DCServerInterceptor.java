@@ -30,7 +30,8 @@ public class DCServerInterceptor implements InstanceMethodsAroundInterceptor {
             next.setHeadValue(rpcContext.getAttachment(next.getHeadKey()));
         }
 
-        AbstractSpan span = ContextManager.createEntrySpan("/DC/server/process-domain:"
+        AbstractSpan span = ContextManager.createEntrySpan(
+                "/DC/server/domain:"
                 + invokeContext.getDomain() + ";op:" + invokeContext.getOp(), contextCarrier);
 
         span.setComponent("DC");
