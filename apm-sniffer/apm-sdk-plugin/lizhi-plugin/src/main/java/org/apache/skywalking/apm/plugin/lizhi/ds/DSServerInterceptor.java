@@ -31,7 +31,7 @@ public class DSServerInterceptor implements StaticMethodsAroundInterceptor {
 
         AbstractSpan span = ContextManager.createEntrySpan("/DS/server", contextCarrier);
 
-        span.setComponent("DS-Server");
+        span.setComponent("DS");
         SpanLayer.asDB(span);
     }
 

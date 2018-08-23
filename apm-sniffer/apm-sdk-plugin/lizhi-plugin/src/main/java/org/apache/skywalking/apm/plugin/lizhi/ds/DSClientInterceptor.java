@@ -33,7 +33,7 @@ public class DSClientInterceptor implements StaticMethodsAroundInterceptor {
             next = next.next();
             reqMsg.setAttachment(next.getHeadKey(), next.getHeadValue());
         }
-        span.setComponent("DS-Client");
+        span.setComponent("DS");
         SpanLayer.asDB(span);
     }
 
@@ -60,13 +60,14 @@ public class DSClientInterceptor implements StaticMethodsAroundInterceptor {
         for (DataStoreReqMsg req : transaction.getReqList()) {
             if (req.type == DataStoreReqMsg.MsgTypeStoreBean) {
                 StoreBeanObjectInfo beanInfo = (StoreBeanObjectInfo) req.data;
-                return "mysql-" + beanInfo.getClassinfo().dbname;
+                return "mysql-" + beanInfo.getClassinfo().dbname + "."
+                        + beanInfo.getClassinfo().tableName;
             } else if (req.type == DataStoreReqMsg.MsgTypeRedis) {
                 RedisCmdInfo rds = (RedisCmdInfo) req.data;
                 return "redis-" + rds.server;
             } else if (req.type == DataStoreReqMsg.MsgTypeStatement) {
                 DataStoreStatement stmt = (DataStoreStatement) req.data;
-                return "mysql-statement-" + stmt.db;
+                return "mysql-statement-" + stmt.db + "-" + stmt.statement;
             } else if (req.type == DataStoreReqMsg.MsgTypeCacheBean) {
                 CacheBeanObjectInfo cachebeanInfo = (CacheBeanObjectInfo) req.data;
                 return "memcached-" + cachebeanInfo.getClassInfo().getServer();
