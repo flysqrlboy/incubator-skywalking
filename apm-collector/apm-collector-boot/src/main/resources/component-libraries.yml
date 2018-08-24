@@ -213,6 +213,18 @@ HttpServer:
 express:
   id: 4002
   languages: Node.js
+DC:
+  id: 10001
+  languages: Java
+DS:
+  id: 10002
+  languages: Java
+WhalinMemCached:
+  id: 10003
+  languages: Java
+AppServer:
+  id: 10004
+  languages: Java
 
 # Component Server mapping defines the server display names of some components
 # e.g.
@@ -238,4 +250,5 @@ Component-Server-Mappings:
   EntityFrameworkCore.Sqlite: SQLite
   Pomelo.EntityFrameworkCore.MySql: Mysql
   Npgsql.EntityFrameworkCore.PostgreSQL: PostgreSQL
+  WhalinMemCached: Memcached
 
