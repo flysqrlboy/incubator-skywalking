@@ -20,10 +20,15 @@
 package org.apache.skywalking.apm.toolkit.activation.log.logback.v1.x;
 
 import java.lang.reflect.Method;
-import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
+import java.util.Map;
+
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
+
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.LoggerContextVO;
 
 /**
  * Created by wusheng on 2016/12/7.
@@ -37,7 +42,17 @@ public class PrintTraceIdInterceptor implements InstanceMethodsAroundInterceptor
 
     @Override public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
         Class<?>[] argumentsTypes, Object ret) throws Throwable {
+
+        ILoggingEvent loggingEvent = (ILoggingEvent) allArguments[0];
+        if (loggingEvent.getLoggerContextVO() != null) {
+            LoggerContextVO contextVO = loggingEvent.getLoggerContextVO();
+            Map<String, String> propertyMap = contextVO.getPropertyMap();
+            if (propertyMap != null && propertyMap.containsKey("globalTraceId")) {
+                return "TID:" + propertyMap.get("globalTraceId");
+            }
+        }
         return "TID:" + ContextManager.getGlobalTraceId();
+
     }
 
     @Override public void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments,
