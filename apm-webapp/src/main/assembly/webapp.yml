@@ -21,9 +21,9 @@ collector:
   path: /graphql
   ribbon:
     ReadTimeout: 10000
-    listOfServers: 127.0.0.1:10800
+    listOfServers: 192.168.6.74:10800,192.168.6.67:10800
 
 security:
   user:
     admin:
-      password: admin
+      password: lizhi
