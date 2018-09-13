@@ -56,31 +56,47 @@ public class SamplingService implements BootService {
     }
 
     @Override
-    public void boot() throws Throwable {
+    public synchronized void boot() throws Throwable {
+        stopResetSamplingFactorScheduler();
+        
+        if (Config.Agent.SAMPLE_N_PER_3_SECS > 0) {
+            startResetSamplingFactorScheduler();
+        }
+    }
+    
+    public void startResetSamplingFactorScheduler() {
+        if (on) {
+            return;
+        }
+        
+        on = true;
+        this.resetSamplingFactor();
+        ScheduledExecutorService service = Executors
+            .newSingleThreadScheduledExecutor(new DefaultNamedThreadFactory("SamplingService"));
+        scheduledFuture = service.scheduleAtFixedRate(new RunnableWithExceptionProtection(new Runnable() {
+            @Override
+            public void run() {
+                resetSamplingFactor();
+            }
+        }, new RunnableWithExceptionProtection.CallbackWhenException() {
+            @Override public void handle(Throwable t) {
+                logger.error("unexpected exception.", t);
+            }
+        }), 0, 3, TimeUnit.SECONDS);
+        logger.debug("Agent sampling mechanism started. Sample {} traces in 3 seconds.", Config.Agent.SAMPLE_N_PER_3_SECS);
+    }
+    
+    public void stopResetSamplingFactorScheduler() {
+        if (!on) {
+            return;
+        }
+        
+        on = false;
         if (scheduledFuture != null) {
-            /**
-             * If {@link #boot()} invokes twice, mostly in test cases,
-             * cancel the old one.
-             */
             scheduledFuture.cancel(true);
         }
-        if (Config.Agent.SAMPLE_N_PER_3_SECS > 0) {
-            on = true;
-            this.resetSamplingFactor();
-            ScheduledExecutorService service = Executors
-                .newSingleThreadScheduledExecutor(new DefaultNamedThreadFactory("SamplingService"));
-            scheduledFuture = service.scheduleAtFixedRate(new RunnableWithExceptionProtection(new Runnable() {
-                @Override
-                public void run() {
-                    resetSamplingFactor();
-                }
-            }, new RunnableWithExceptionProtection.CallbackWhenException() {
-                @Override public void handle(Throwable t) {
-                    logger.error("unexpected exception.", t);
-                }
-            }), 0, 3, TimeUnit.SECONDS);
-            logger.debug("Agent sampling mechanism started. Sample {} traces in 10 seconds.", Config.Agent.SAMPLE_N_PER_3_SECS);
-        }
+
+        logger.debug("Agent sampling mechanism stoped.");
     }
 
     @Override

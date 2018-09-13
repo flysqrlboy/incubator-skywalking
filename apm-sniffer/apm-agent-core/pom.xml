@@ -122,6 +122,14 @@
             <artifactId>apm-datacarrier</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <!-- Config Service Dependency -->
+        <dependency>
+            <groupId>fm.lizhi.commons</groupId>
+            <artifactId>lz-commons-config</artifactId>
+            <version>2.2.7</version>
+        </dependency>
+
     </dependencies>
     <build>
         <extensions>

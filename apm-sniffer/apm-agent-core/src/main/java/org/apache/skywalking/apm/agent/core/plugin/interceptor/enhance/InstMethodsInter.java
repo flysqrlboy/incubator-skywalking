@@ -26,6 +26,7 @@ import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.implementation.bind.annotation.This;
+import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.PluginException;
 import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
@@ -75,6 +76,11 @@ public class InstMethodsInter {
         @SuperCall Callable<?> zuper,
         @Origin Method method
     ) throws Throwable {
+        if (!Config.isAgentEnabled()) {
+            logger.warn("The skywalking agent has been closed, will not create any span.");
+            return zuper.call();
+        }
+        
         EnhancedInstance targetObject = (EnhancedInstance)obj;
 
         MethodInterceptResult result = new MethodInterceptResult();
