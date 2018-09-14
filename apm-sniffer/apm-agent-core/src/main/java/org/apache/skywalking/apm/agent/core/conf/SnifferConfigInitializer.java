@@ -26,11 +26,20 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
+
+import com.alibaba.fastjson.JSON;
+import com.google.common.base.Strings;
+import fm.lizhi.commons.config.config.ConfigBean;
+import fm.lizhi.commons.config.event.ConfigFuture;
+import fm.lizhi.commons.config.service.ConfigService;
 import org.apache.skywalking.apm.agent.core.boot.AgentPackageNotFoundException;
 import org.apache.skywalking.apm.agent.core.boot.AgentPackagePath;
+import org.apache.skywalking.apm.agent.core.boot.ServiceManager;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
+import org.apache.skywalking.apm.agent.core.sampling.SamplingService;
 import org.apache.skywalking.apm.util.ConfigInitializer;
 import org.apache.skywalking.apm.util.StringUtil;
 
@@ -43,10 +52,24 @@ public class SnifferConfigInitializer {
     private static final ILog logger = LogManager.getLogger(SnifferConfigInitializer.class);
     private static String CONFIG_FILE_NAME = "/config/agent.config";
     private static String ENV_KEY_PREFIX = "skywalking.";
+    private static String SKYWALKING_AGENT_CONFIG_KEY = "skywalking-agent";
     private static boolean IS_INIT_COMPLETED = false;
+    
+    private static SamplingService SAMPLING_SERVICE;
 
     /**
-     * Try to locate `agent.config`, which should be in the /config dictionary of agent package.
+     * Try to locate `agent.config`, which should be in the /config dictionary of agent package. <br/>
+     * 
+     * Load order: <br/>
+     * 
+     * 1: `commonConfig.agent.focus_override_config` is `true` : <br/>
+     * 
+     * system properties > common config(config service) > application config(config service) > config file
+     * 
+     * 2: `commonConfig.agent.focus_override_config` is `false` or not set : <br/>
+     * 
+     * system properties > application config(config service) > common config(config service) > config file
+     * 
      * <p>
      * Also try to override the config by system.env and system.properties. All the keys in these two places should
      * start with {@link #ENV_KEY_PREFIX}. e.g. in env `skywalking.agent.application_code=yourAppName` to override
@@ -55,22 +78,10 @@ public class SnifferConfigInitializer {
      * At the end, `agent.application_code` and `collector.servers` must be not blank.
      */
     public static void initialize() throws ConfigNotFoundException, AgentPackageNotFoundException {
-        InputStreamReader configFileStream;
-
-        try {
-            configFileStream = loadConfigFromAgentFolder();
-            Properties properties = new Properties();
-            properties.load(configFileStream);
-            ConfigInitializer.initialize(properties, Config.class);
-        } catch (Exception e) {
-            logger.error(e, "Failed to read the config file, skywalking is going to run in default config.");
-        }
-
-        try {
-            overrideConfigBySystemEnv();
-        } catch (Exception e) {
-            logger.error(e, "Failed to read the system env.");
-        }
+        loadConfig();
+        overrideConfig();
+        
+        logger.info("Skywalking agent config: {}", Config.print());
 
         if (StringUtil.isEmpty(Config.Agent.APPLICATION_CODE)) {
             throw new ExceptionInInitializerError("`agent.application_code` is missing.");
@@ -80,6 +91,155 @@ public class SnifferConfigInitializer {
         }
 
         IS_INIT_COMPLETED = true;
+    }
+
+    /**
+     * load config : <br/>
+     * 
+     * Load from config service first.
+     * 
+     */
+    private static void loadConfig() {
+        try {
+            loadConfigFromService();
+
+        } catch (Exception e) {
+            logger.error(e, "Failed to load config from config service, skywalking is going to load from file.");
+            loadConfigFromFile();
+        }
+    }
+
+    private static void overrideConfig() {
+        try {
+            overrideConfigBySystemEnv();
+        } catch (Exception e) {
+            logger.error(e, "Failed to read the system env.");
+        }
+
+        Config.Logging.FILE_NAME = Config.Agent.APPLICATION_CODE + ".log";
+    }
+
+    private static void loadConfigFromFile() {
+        InputStreamReader configFileStream;
+        try {
+            configFileStream = loadConfigFromAgentFolder();
+            Properties properties = new Properties();
+            properties.load(configFileStream);
+            ConfigInitializer.initialize(properties, Config.class);
+        } catch (Exception e) {
+            logger.error(e, "Failed to read the config file, skywalking is going to run in default config.");
+        }
+    }
+
+    private static void loadConfigFromService() throws IllegalAccessException {
+        logger.info("load config from service");
+        
+        boolean isProduct = "PRODUCT".equalsIgnoreCase(System.getProperty("conf.env"));
+        String skyWalkingAgentConfigKey = System.getProperty("skyWalkingAgentConfigKey", SKYWALKING_AGENT_CONFIG_KEY);
+        
+        Properties properties = ConfigService.loadConfig(null, Properties.class,
+            isProduct ? ConfigBean.PRODUCTION : ConfigBean.TEST_OFFICE, new ConfigFuture() {
+                @Override public void configChange(String file, Map<String, String> configs) {
+                    if (!Objects.equals(SKYWALKING_AGENT_CONFIG_KEY, file)) {
+                        return;
+                    }
+                    
+                    try {
+                        SnifferConfigInitializer.configChange(configs);
+                    } catch (Throwable e) {
+                        logger.error("Failed to change skywalking agent config", e);
+                    }
+                }
+            }, skyWalkingAgentConfigKey);
+
+        properties = getConfigProperties(properties);
+        ConfigInitializer.initialize(properties, Config.class);
+    }
+
+    private static void configChange(Map<String, String> configs) throws Throwable {
+        Properties props = getConfigProperties(configs);
+        if (props == null) {
+            return;
+        }
+
+        logger.info("Skywalking agent config changed, new config: {}", configs);
+        
+        ConfigInitializer.initialize(props, Config.class);
+        overrideConfig();
+ 
+        logger.info("Skywalking agent config: {}", Config.print());
+
+        // reboot sampling service
+        if (SAMPLING_SERVICE == null) {
+            SAMPLING_SERVICE = ServiceManager.INSTANCE.findService(SamplingService.class);
+        }
+
+        if (SAMPLING_SERVICE != null) {
+            SAMPLING_SERVICE.boot();
+        }
+    }
+
+    private static Properties getConfigProperties(Map<String, String> configMap) {
+        Properties props = new Properties();
+        props.putAll(configMap);
+        
+        return getConfigProperties(props);
+    }
+
+    /**
+     * Loading order: <br/>
+     *
+     * 1: `commonConfig.agent.focus_override_config` is `true` : <br/>
+     *
+     * system properties > common config(config service) > application config(config service) > config file
+     *
+     * 2: `commonConfig.agent.focus_override_config` is `false` or not set : <br/>
+     *
+     * system properties > application config(config service) override common config(config service) > config file
+     *
+     * @param configProps
+     * @return
+     */
+    private static Properties getConfigProperties(Properties configProps) {
+        String commonConfigKey = "common";
+        String appConfigKey = System.getProperty("app.name", "");
+        String focusOverrideKey = "focus_override_config";
+        
+        Properties commonConfigProps = null;
+        Properties appConfigProps = null;
+
+        String commonConfig = configProps.getProperty(commonConfigKey);
+        String appConfig = configProps.getProperty(appConfigKey);
+
+        if (!Strings.isNullOrEmpty(commonConfig)) {
+            commonConfigProps = JSON.parseObject(commonConfig, Properties.class);
+        }
+
+        if (!Strings.isNullOrEmpty(appConfig)) {
+            appConfigProps = JSON.parseObject(appConfig, Properties.class);
+        }
+        
+        if (commonConfigProps == null && appConfigProps == null) {
+            return null;
+        }
+
+        if (commonConfigProps == null && appConfigProps != null) {
+            return appConfigProps;
+        }
+
+        if (commonConfigProps != null && appConfigProps == null) {
+            return commonConfigProps;
+        }
+        
+        if (commonConfigProps != null
+            && Objects.equals(Boolean.TRUE.toString(), commonConfigProps.get(focusOverrideKey))) {
+            return commonConfigProps;
+        } 
+        
+        // application config override common config 
+        commonConfigProps.putAll(appConfigProps);
+        
+        return commonConfigProps;
     }
 
     public static boolean isInitCompleted() {

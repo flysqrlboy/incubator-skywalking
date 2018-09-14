@@ -1,6 +1,7 @@
 package org.apache.skywalking.apm.plugin.lizhi.dc.v04;
 
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 
 import org.apache.skywalking.apm.agent.core.context.CarrierItem;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
@@ -30,9 +31,10 @@ public class DCServerInterceptor implements InstanceMethodsAroundInterceptor {
             next.setHeadValue(rpcContext.getAttachment(next.getHeadKey()));
         }
 
-        AbstractSpan span = ContextManager.createEntrySpan(
-                "/DC/server/domain:"
-                + invokeContext.getDomain() + ";op:" + invokeContext.getOp(), contextCarrier);
+        AbstractSpan span = ContextManager.createExitSpan("DC/server/", contextCarrier,
+                "ip:" + InetAddress.getLocalHost().getHostAddress()
+                + ",domain:" + invokeContext.getDomain()
+                + ",op:" + invokeContext.getOp());
 
         span.setComponent("DC");
         SpanLayer.asRPCFramework(span);

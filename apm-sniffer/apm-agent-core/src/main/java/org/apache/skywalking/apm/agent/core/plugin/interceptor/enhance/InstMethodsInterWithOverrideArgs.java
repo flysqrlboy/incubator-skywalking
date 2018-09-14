@@ -25,6 +25,7 @@ import net.bytebuddy.implementation.bind.annotation.Morph;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.This;
+import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.plugin.PluginException;
 import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
@@ -74,6 +75,11 @@ public class InstMethodsInterWithOverrideArgs {
         @Origin Method method,
         @Morph OverrideCallable zuper
     ) throws Throwable {
+        if (!Config.isAgentEnabled()) {
+            logger.warn("The skywalking agent has been closed, will not create any span.");
+            return zuper.call(allArguments);
+        }
+        
         EnhancedInstance targetObject = (EnhancedInstance)obj;
 
         MethodInterceptResult result = new MethodInterceptResult();

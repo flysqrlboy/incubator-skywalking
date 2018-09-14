@@ -24,6 +24,7 @@ import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Morph;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
@@ -67,6 +68,11 @@ public class StaticMethodsInterWithOverrideArgs {
     @RuntimeType
     public Object intercept(@Origin Class<?> clazz, @AllArguments Object[] allArguments, @Origin Method method,
         @Morph OverrideCallable zuper) throws Throwable {
+        if (!Config.isAgentEnabled()) {
+            logger.warn("The skywalking agent has been closed, will not create any span.");
+            return zuper.call(allArguments);
+        }
+        
         StaticMethodsAroundInterceptor interceptor = InterceptorInstanceLoader
             .load(staticMethodsAroundInterceptorClassName, clazz.getClassLoader());
 

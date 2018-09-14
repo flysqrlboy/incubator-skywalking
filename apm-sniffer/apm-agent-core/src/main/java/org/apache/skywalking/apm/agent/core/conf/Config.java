@@ -30,7 +30,20 @@ import org.apache.skywalking.apm.agent.core.logging.core.WriterFactory;
  */
 public class Config {
 
+    
+    
     public static class Agent {
+
+        /**
+         * If the current value is true, the applicaiton's config will be ignored. 
+         */
+        public static boolean FOCUS_OVERRIDE_CONFIG = false;
+        
+        /**
+         * If the current value is true, then span is created and sent to the collector. 
+         */
+        public static boolean ENABLED = true;
+        
         /**
          * Namespace isolates headers in cross process propagation. The HEADER name will be `HeaderName:Namespace`.
          */
@@ -165,4 +178,43 @@ public class Config {
             public static boolean TRACE_PARAM = false;
         }
     }
+
+    /**
+     * Negative or zero means off
+     * 
+     * @return
+     */
+    public static boolean isAgentEnabled() {
+        return Agent.ENABLED;
+    }
+    
+    public static String print() {
+        return
+            "\nagent.focus_override_config = "  + Agent.FOCUS_OVERRIDE_CONFIG + "\n"
+            + "agent.enabled = "  + Agent.ENABLED + "\n"
+            + "agent.namespace = "  + Agent.NAMESPACE + "\n"
+            + "agent.application_code = "  + Agent.APPLICATION_CODE + "\n"
+            + "agent.authentication = "  + Agent.AUTHENTICATION + "\n"
+            + "agent.sample_n_per_3_secs = "  + Agent.SAMPLE_N_PER_3_SECS + "\n"
+            + "agent.ignore_suffix = "  + Agent.IGNORE_SUFFIX + "\n"
+            + "agent.span_limit_per_segment = "  + Agent.SPAN_LIMIT_PER_SEGMENT + "\n"
+            + "agent.is_open_debugging_class = "  + Agent.IS_OPEN_DEBUGGING_CLASS + "\n"
+            + "collector.grpc_channel_check_interval = "  + Collector.GRPC_CHANNEL_CHECK_INTERVAL + "\n"
+            + "collector.app_and_service_register_check_interval = "  + Collector.APP_AND_SERVICE_REGISTER_CHECK_INTERVAL + "\n"
+            + "collector.discovery_check_interval = "  + Collector.DISCOVERY_CHECK_INTERVAL + "\n"
+            + "collector.servers = "  + Collector.SERVERS + "\n"
+            + "collector.direct_servers = "  + Collector.DIRECT_SERVERS + "\n"
+            + "collector.discovery_service_name = "  + Collector.DISCOVERY_SERVICE_NAME + "\n"
+            + "jvm.buffer_size = "  + Jvm.BUFFER_SIZE + "\n"
+            + "buffer.channel_size = "  + Buffer.CHANNEL_SIZE + "\n"
+            + "buffer.buffer_size = "  + Buffer.BUFFER_SIZE + "\n"
+            + "dictionary.application_code_buffer_size = "  + Dictionary.APPLICATION_CODE_BUFFER_SIZE + "\n"
+            + "dictionary.operation_name_buffer_size = "  + Dictionary.OPERATION_NAME_BUFFER_SIZE + "\n"
+            + "logging.file_name = "  + Logging.FILE_NAME + "\n"
+            + "logging.dir = "  + Logging.DIR + "\n"
+            + "logging.max_file_size = "  + Logging.MAX_FILE_SIZE + "\n"
+            + "logging.level = "  + Logging.LEVEL + "\n"
+            + "plugin.mongodb.trace_param = "  + Plugin.MongoDB.TRACE_PARAM;
+    }
+    
 }
